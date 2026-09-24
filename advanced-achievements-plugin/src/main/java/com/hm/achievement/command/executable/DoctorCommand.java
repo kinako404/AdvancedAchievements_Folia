@@ -22,6 +22,7 @@ import com.hm.achievement.category.Category;
 import com.hm.achievement.command.pagination.CommandPagination;
 import com.hm.achievement.config.AchievementMap;
 import com.hm.achievement.db.AbstractDatabaseManager;
+import com.hm.achievement.utils.FoliaHelper;
 
 /** Provides a read-only health report for administrators. */
 @Singleton
@@ -58,7 +59,7 @@ public class DoctorCommand extends AbstractCommand {
 		List<String> integrations = integrationStates();
 
 		sender.sendMessage(pluginHeader + langConfig.getString("doctor-running"));
-		advancedAchievements.getServer().getScheduler().runTaskAsynchronously(advancedAchievements, () -> {
+		FoliaHelper.runAsync(() -> {
 			DoctorReport report = new DoctorReport();
 			report.ok("Advanced Achievements " + version + " is enabled.");
 			report.info("Platform: " + platform);
@@ -129,8 +130,7 @@ public class DoctorCommand extends AbstractCommand {
 			integrations.forEach(report::info);
 			report.info("This report is read-only; no settings or files were changed.");
 
-			advancedAchievements.getServer().getScheduler().runTask(advancedAchievements,
-					() -> sendReport(sender, page, report));
+			FoliaHelper.runOnGlobal(() -> sendReport(sender, page, report));
 		});
 	}
 

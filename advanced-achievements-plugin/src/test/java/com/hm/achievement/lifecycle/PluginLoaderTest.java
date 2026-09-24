@@ -1,5 +1,6 @@
 package com.hm.achievement.lifecycle;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -11,15 +12,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.PluginManager;
-import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import com.hm.achievement.AdvancedAchievements;
@@ -41,8 +43,13 @@ import com.hm.achievement.listener.statistics.DropsListener;
 import com.hm.achievement.placeholder.AchievementPlaceholderHook;
 import com.hm.achievement.runnable.AchieveDistanceRunnable;
 import com.hm.achievement.runnable.AchievePlayTimeRunnable;
+import com.hm.achievement.utils.FoliaHelper;
 
 import dagger.Lazy;
+
+import io.papermc.paper.threadedregions.scheduler.AsyncScheduler;
+import io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler;
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 
 class PluginLoaderTest {
 
@@ -107,20 +114,29 @@ class PluginLoaderTest {
 				mock(CommandTabCompleter.class), disabledCategories, mainConfig, mock(ConfigurationParser.class),
 				mock(AchieveDistanceRunnable.class), mock(AchievePlayTimeRunnable.class), mock(ReloadCommand.class),
 				mock(JobsEnableWatcher.class));
-		BukkitScheduler scheduler = mock(BukkitScheduler.class);
-		BukkitTask firstSenderTask = mock(BukkitTask.class);
-		BukkitTask secondSenderTask = mock(BukkitTask.class);
-		BukkitTask firstCleanerTask = mock(BukkitTask.class);
-		BukkitTask secondCleanerTask = mock(BukkitTask.class);
-		when(scheduler.runTaskTimerAsynchronously(eq(plugin), eq(requestsSender), eq(1200L), eq(1200L)))
-				.thenReturn(firstSenderTask);
-		when(scheduler.runTaskTimerAsynchronously(eq(plugin), eq(requestsSender), eq(40L), eq(40L)))
+		GlobalRegionScheduler globalRegionScheduler = mock(GlobalRegionScheduler.class);
+		AsyncScheduler asyncScheduler = mock(AsyncScheduler.class);
+		ScheduledTask firstSenderTask = mock(ScheduledTask.class);
+		ScheduledTask secondSenderTask = mock(ScheduledTask.class);
+		ScheduledTask firstCleanerTask = mock(ScheduledTask.class);
+		ScheduledTask secondCleanerTask = mock(ScheduledTask.class);
+		ArgumentCaptor<Consumer<ScheduledTask>> firstSenderRunnable = consumerCaptor();
+		ArgumentCaptor<Consumer<ScheduledTask>> firstCleanerRunnable = consumerCaptor();
+		// The async database sender keeps its periods in milliseconds: 1200 ticks -> 60000 ms, 40 ticks -> 2000 ms.
+		when(asyncScheduler.runAtFixedRate(eq(plugin), firstSenderRunnable.capture(), eq(60000L), eq(60000L),
+				eq(TimeUnit.MILLISECONDS))).thenReturn(firstSenderTask);
+		when(asyncScheduler.runAtFixedRate(eq(plugin), any(), eq(2000L), eq(2000L), eq(TimeUnit.MILLISECONDS)))
 				.thenReturn(secondSenderTask);
-		when(scheduler.runTaskTimer(eq(plugin), eq(cleaner), eq(20000L), eq(20000L))).thenReturn(firstCleanerTask);
-		when(scheduler.runTaskTimer(eq(plugin), eq(cleaner), eq(50L), eq(50L))).thenReturn(secondCleanerTask);
+		// The cleaner task stays in ticks: 20000 and 50.
+		when(globalRegionScheduler.runAtFixedRate(eq(plugin), firstCleanerRunnable.capture(), eq(20000L), eq(20000L)))
+				.thenReturn(firstCleanerTask);
+		when(globalRegionScheduler.runAtFixedRate(eq(plugin), any(), eq(50L), eq(50L))).thenReturn(secondCleanerTask);
+
+		FoliaHelper.init(plugin);
 
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-			bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+			bukkit.when(Bukkit::getGlobalRegionScheduler).thenReturn(globalRegionScheduler);
+			bukkit.when(Bukkit::getAsyncScheduler).thenReturn(asyncScheduler);
 			underTest.launchScheduledTasks();
 			mainConfig.set("BungeeMode", true);
 			underTest.launchScheduledTasks();
@@ -128,6 +144,16 @@ class PluginLoaderTest {
 
 		verify(firstSenderTask).cancel();
 		verify(firstCleanerTask).cancel();
+		// The captured lambdas must delegate to the objects that were passed in when the tasks were scheduled.
+		firstSenderRunnable.getValue().accept(firstSenderTask);
+		verify(requestsSender).run();
+		firstCleanerRunnable.getValue().accept(firstCleanerTask);
+		verify(cleaner).run();
+	}
+
+	@SuppressWarnings("unchecked")
+	private ArgumentCaptor<Consumer<ScheduledTask>> consumerCaptor() {
+		return ArgumentCaptor.forClass(Consumer.class);
 	}
 
 	@SuppressWarnings("unchecked")

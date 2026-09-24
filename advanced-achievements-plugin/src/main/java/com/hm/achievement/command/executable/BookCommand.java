@@ -29,6 +29,7 @@ import com.hm.achievement.db.AbstractDatabaseManager;
 import com.hm.achievement.db.data.AwardedDBAchievement;
 import com.hm.achievement.domain.Achievement;
 import com.hm.achievement.lifecycle.Cleanable;
+import com.hm.achievement.utils.FoliaHelper;
 import com.hm.achievement.utils.SoundPlayer;
 
 /**
@@ -109,11 +110,11 @@ public class BookCommand extends AbstractCommand implements Cleanable {
 
 		if (!isInCooldownPeriod(player)) {
 			UUID playerId = player.getUniqueId();
-			advancedAchievements.getServer().getScheduler().runTaskAsynchronously(advancedAchievements, () -> {
+			FoliaHelper.runAsync(() -> {
 				try {
 					List<AwardedDBAchievement> playerAchievementsList = databaseManager
 							.getPlayerAchievementsList(playerId);
-					advancedAchievements.getServer().getScheduler().runTask(advancedAchievements, () -> {
+					FoliaHelper.runOnPlayer(player, () -> {
 						if (player.isOnline()) {
 							deliverBook(playerAchievementsList, player);
 						}

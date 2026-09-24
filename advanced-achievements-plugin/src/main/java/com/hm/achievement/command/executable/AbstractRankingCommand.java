@@ -19,6 +19,7 @@ import org.bukkit.entity.Player;
 import com.hm.achievement.AdvancedAchievements;
 import com.hm.achievement.command.pagination.CommandPagination;
 import com.hm.achievement.db.AbstractDatabaseManager;
+import com.hm.achievement.utils.FoliaHelper;
 import com.hm.achievement.utils.SoundPlayer;
 
 /**
@@ -92,10 +93,10 @@ public abstract class AbstractRankingCommand extends AbstractCommand {
 			}
 			cacheRefreshInProgress = true;
 			long rankingStartTime = getRankingStartTime();
-			advancedAchievements.getServer().getScheduler().runTaskAsynchronously(advancedAchievements, () -> {
+			FoliaHelper.runAsync(() -> {
 				try {
 					Map<String, Integer> rankings = databaseManager.getTopList(rankingStartTime);
-					advancedAchievements.getServer().getScheduler().runTask(advancedAchievements, () -> {
+					FoliaHelper.runOnGlobal(() -> {
 						cachedSortedRankings = rankings;
 						cachedAchievementCounts = new ArrayList<>(rankings.values());
 						lastCacheUpdate = System.currentTimeMillis();
@@ -110,7 +111,7 @@ public abstract class AbstractRankingCommand extends AbstractCommand {
 					});
 				} catch (RuntimeException e) {
 					logger.log(java.util.logging.Level.SEVERE, "Could not load achievement rankings.", e);
-					advancedAchievements.getServer().getScheduler().runTask(advancedAchievements, () -> {
+					FoliaHelper.runOnGlobal(() -> {
 						cacheRefreshInProgress = false;
 						pendingRequests.clear();
 					});

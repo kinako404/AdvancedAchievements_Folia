@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,8 +26,6 @@ import org.bukkit.advancement.Advancement;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +42,10 @@ import com.hm.achievement.domain.Achievement;
 import com.hm.achievement.domain.Achievement.AchievementBuilder;
 import com.hm.achievement.gui.GUIItems;
 import com.hm.achievement.gui.OrderedCategory;
+import com.hm.achievement.utils.FoliaHelper;
+
+import io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler;
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 
 @ExtendWith(MockitoExtension.class)
 class AdvancementManagerTest {
@@ -56,9 +59,9 @@ class AdvancementManagerTest {
 	@Mock
 	private UnsafeValues unsafeValues;
 	@Mock
-	private BukkitScheduler scheduler;
+	private GlobalRegionScheduler globalRegionScheduler;
 	@Mock
-	private BukkitTask generationTask;
+	private ScheduledTask generationTask;
 	@Mock
 	private CommandSender feedback;
 
@@ -68,6 +71,7 @@ class AdvancementManagerTest {
 
 	@BeforeEach
 	void setUp() {
+		FoliaHelper.init(plugin);
 		mainConfig = new YamlConfiguration();
 		mainConfig.set("RegisterAdvancementDescriptions", true);
 		mainConfig.set("HideAdvancements", false);
@@ -96,7 +100,7 @@ class AdvancementManagerTest {
 		Advancement loadedChild = mock(Advancement.class);
 		when(unsafeValues.loadAdvancement(eq(rootKey), anyString())).thenReturn(loadedRoot);
 		when(unsafeValues.loadAdvancement(eq(childKey), anyString())).thenReturn(loadedChild);
-		ArgumentCaptor<Runnable> scheduled = scheduledTaskCaptor();
+		ArgumentCaptor<Consumer<ScheduledTask>> scheduled = scheduledTaskCaptor();
 		Runnable complete = mock(Runnable.class);
 
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
@@ -105,7 +109,7 @@ class AdvancementManagerTest {
 					.thenReturn(java.util.List.of(oldRoot, oldChild).iterator(), Collections.emptyIterator());
 
 			underTest.generateAdvancementsIncremental(true, feedback, complete);
-			Runnable tick = scheduled.getValue();
+			Runnable tick = scheduledTick(scheduled);
 
 			tick.run();
 			verify(unsafeValues).removeAdvancement(rootKey);
@@ -142,7 +146,7 @@ class AdvancementManagerTest {
 		configureSingleAchievement();
 		Advancement existingRoot = mock(Advancement.class);
 		when(unsafeValues.loadAdvancement(eq(childKey), anyString())).thenReturn(mock(Advancement.class));
-		ArgumentCaptor<Runnable> scheduled = scheduledTaskCaptor();
+		ArgumentCaptor<Consumer<ScheduledTask>> scheduled = scheduledTaskCaptor();
 
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
 			configureBukkit(bukkit);
@@ -150,7 +154,7 @@ class AdvancementManagerTest {
 			bukkit.when(() -> Bukkit.getAdvancement(childKey)).thenReturn(null);
 
 			underTest.generateAdvancementsIncremental(false, null, null);
-			scheduled.getValue().run();
+			scheduledTick(scheduled).run();
 
 			bukkit.verify(Bukkit::advancementIterator, never());
 			bukkit.verify(Bukkit::reloadData, never());
@@ -168,7 +172,7 @@ class AdvancementManagerTest {
 		when(guiItems.getOrderedAchievementItems()).thenReturn(Collections.emptyMap());
 		IllegalArgumentException failure = new IllegalArgumentException("already exists");
 		when(unsafeValues.loadAdvancement(eq(rootKey), anyString())).thenThrow(failure);
-		ArgumentCaptor<Runnable> scheduled = scheduledTaskCaptor();
+		ArgumentCaptor<Consumer<ScheduledTask>> scheduled = scheduledTaskCaptor();
 		Runnable complete = mock(Runnable.class);
 
 		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
@@ -176,7 +180,7 @@ class AdvancementManagerTest {
 			bukkit.when(() -> Bukkit.getAdvancement(rootKey)).thenReturn(null);
 
 			underTest.generateAdvancementsIncremental(false, feedback, complete);
-			Runnable tick = scheduled.getValue();
+			Runnable tick = scheduledTick(scheduled);
 			tick.run();
 			tick.run();
 
@@ -189,18 +193,29 @@ class AdvancementManagerTest {
 				eq(failure));
 		verify(feedback).sendMessage("§cAdvancement generation failed. Check the server logs for details.");
 		verify(complete, never()).run();
-		verify(scheduler, times(2)).runTaskTimer(eq(plugin), scheduled.capture(), eq(1L), eq(1L));
+		verify(globalRegionScheduler, times(2)).runAtFixedRate(eq(plugin), scheduled.capture(), eq(1L), eq(1L));
 	}
 
-	private ArgumentCaptor<Runnable> scheduledTaskCaptor() {
-		ArgumentCaptor<Runnable> scheduled = ArgumentCaptor.forClass(Runnable.class);
-		when(scheduler.runTaskTimer(eq(plugin), scheduled.capture(), eq(1L), eq(1L))).thenReturn(generationTask);
+	@SuppressWarnings("unchecked")
+	private ArgumentCaptor<Consumer<ScheduledTask>> scheduledTaskCaptor() {
+		ArgumentCaptor<Consumer<ScheduledTask>> scheduled = ArgumentCaptor.forClass(Consumer.class);
+		when(globalRegionScheduler.runAtFixedRate(eq(plugin), scheduled.capture(), eq(1L), eq(1L)))
+				.thenReturn(generationTask);
 		return scheduled;
+	}
+
+	/**
+	 * Runs one iteration of the repeating generation task registered on the global region scheduler, exactly as the
+	 * server would.
+	 */
+	private Runnable scheduledTick(ArgumentCaptor<Consumer<ScheduledTask>> scheduled) {
+		Consumer<ScheduledTask> generationStep = scheduled.getValue();
+		return () -> generationStep.accept(generationTask);
 	}
 
 	private void configureBukkit(MockedStatic<Bukkit> bukkit) {
 		bukkit.when(Bukkit::getUnsafe).thenReturn(unsafeValues);
-		bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+		bukkit.when(Bukkit::getGlobalRegionScheduler).thenReturn(globalRegionScheduler);
 		bukkit.when(Bukkit::getOnlinePlayers).thenReturn(Collections.emptyList());
 		bukkit.when(Bukkit::getMinecraftVersion).thenReturn("1.21.1");
 	}

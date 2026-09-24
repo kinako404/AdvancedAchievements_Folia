@@ -17,6 +17,7 @@ import com.hm.achievement.AdvancedAchievements;
 import com.hm.achievement.advancement.AchievementAdvancement;
 import com.hm.achievement.advancement.AdvancementManager;
 import com.hm.achievement.db.CacheManager;
+import com.hm.achievement.utils.FoliaHelper;
 
 /**
  * Listener class to deal with advancements. This class uses delays processing of tasks to avoid spamming a barely
@@ -49,8 +50,7 @@ public class JoinListener implements Listener {
 	 * @param player
 	 */
 	private void scheduleReceivedCacheLoad(Player player) {
-		Bukkit.getScheduler().runTaskAsynchronously(advancedAchievements,
-				() -> cacheManager.getPlayerAchievements(player.getUniqueId()));
+		FoliaHelper.runAsync(() -> cacheManager.getPlayerAchievements(player.getUniqueId()));
 
 	}
 
@@ -62,7 +62,7 @@ public class JoinListener implements Listener {
 	 * @param player
 	 */
 	private void scheduleAwardAdvancements(Player player) {
-		Bukkit.getScheduler().scheduleSyncDelayedTask(advancedAchievements, () -> {
+		FoliaHelper.runLaterOnGlobal(200L, () -> {
 			// Check that the player is still connected.
 			if (!player.isOnline()) {
 				return;
@@ -87,6 +87,6 @@ public class JoinListener implements Listener {
 					}
 				}
 			}
-		}, 200);
+		});
 	}
 }

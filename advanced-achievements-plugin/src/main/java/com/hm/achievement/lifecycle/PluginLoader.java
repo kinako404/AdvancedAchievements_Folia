@@ -1,6 +1,7 @@
 package com.hm.achievement.lifecycle;
 
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
@@ -13,7 +14,6 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.PluginManager;
-import org.bukkit.scheduler.BukkitTask;
 
 import com.hm.achievement.AdvancedAchievements;
 import com.hm.achievement.advancement.AdvancementTabListener;
@@ -34,8 +34,11 @@ import com.hm.achievement.listener.statistics.AbstractListener;
 import com.hm.achievement.placeholder.AchievementPlaceholderHook;
 import com.hm.achievement.runnable.AchieveDistanceRunnable;
 import com.hm.achievement.runnable.AchievePlayTimeRunnable;
+import com.hm.achievement.utils.FoliaHelper;
 
 import dagger.Lazy;
+
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 
 /**
  * Class in charge of loading/reloading the plugin. Orchestrates the different plugin components together.
@@ -77,11 +80,11 @@ public class PluginLoader {
 	private final AchievePlayTimeRunnable playTimeRunnable;
 	private final Cleaner cleaner;
 
-	// Bukkit scheduler tasks.
-	private BukkitTask asyncCachedRequestsSenderTask;
-	private BukkitTask playedTimeTask;
-	private BukkitTask distanceTask;
-	private BukkitTask cleanerTask;
+	// Scheduler tasks.
+	private ScheduledTask asyncCachedRequestsSenderTask;
+	private ScheduledTask playedTimeTask;
+	private ScheduledTask distanceTask;
+	private ScheduledTask cleanerTask;
 
 	@Inject
 	public PluginLoader(AdvancedAchievements advancedAchievements, Logger logger, Set<Reloadable> reloadables,
@@ -202,22 +205,21 @@ public class PluginLoader {
 
 		// Schedule a repeating task to group database queries when statistics are modified.
 		cancelTask(asyncCachedRequestsSenderTask);
-		long databaseTaskPeriod = mainConfig.getBoolean("BungeeMode") ? 40L : 1200L;
-		asyncCachedRequestsSenderTask = Bukkit.getScheduler().runTaskTimerAsynchronously(advancedAchievements,
-				asyncCachedRequestsSender, databaseTaskPeriod, databaseTaskPeriod);
+		long databaseTaskPeriodMs = mainConfig.getBoolean("BungeeMode") ? 2000L : 60000L;
+		asyncCachedRequestsSenderTask = FoliaHelper.runTimerAsync(databaseTaskPeriodMs, databaseTaskPeriodMs,
+				TimeUnit.MILLISECONDS, asyncCachedRequestsSender);
 
 		cancelTask(cleanerTask);
 		long cleanerTaskPeriod = mainConfig.getBoolean("BungeeMode") ? 50L : 20000L;
-		cleanerTask = Bukkit.getScheduler().runTaskTimer(advancedAchievements, cleaner, cleanerTaskPeriod,
-				cleanerTaskPeriod);
+		cleanerTask = FoliaHelper.runTimerOnGlobal(cleanerTaskPeriod, cleanerTaskPeriod, cleaner);
 
 		// Schedule a repeating task to monitor played time for each player (not directly related to an event).
 		cancelTask(playedTimeTask);
 		playedTimeTask = null;
 		if (!disabledCategories.contains(NormalAchievements.PLAYEDTIME)) {
 			int configPlaytimeTaskInterval = mainConfig.getInt("PlaytimeTaskInterval");
-			playedTimeTask = Bukkit.getScheduler().runTaskTimer(advancedAchievements, playTimeRunnable,
-					configPlaytimeTaskInterval * 10L, configPlaytimeTaskInterval * 20L);
+			playedTimeTask = FoliaHelper.runTimerOnGlobal(configPlaytimeTaskInterval * 10L,
+					configPlaytimeTaskInterval * 20L, playTimeRunnable);
 		}
 
 		// Schedule a repeating task to monitor distances travelled by each player (not directly related to an event).
@@ -232,12 +234,12 @@ public class PluginLoader {
 				|| !disabledCategories.contains(NormalAchievements.DISTANCELLAMA)
 				|| !disabledCategories.contains(NormalAchievements.DISTANCESNEAKING)) {
 			int configDistanceTaskInterval = mainConfig.getInt("DistanceTaskInterval");
-			distanceTask = Bukkit.getScheduler().runTaskTimer(advancedAchievements, distanceRunnable,
-					configDistanceTaskInterval * 40L, configDistanceTaskInterval * 20L);
+			distanceTask = FoliaHelper.runTimerOnGlobal(configDistanceTaskInterval * 40L,
+					configDistanceTaskInterval * 20L, distanceRunnable);
 		}
 	}
 
-	private void cancelTask(BukkitTask task) {
+	private void cancelTask(ScheduledTask task) {
 		if (task != null) {
 			task.cancel();
 		}

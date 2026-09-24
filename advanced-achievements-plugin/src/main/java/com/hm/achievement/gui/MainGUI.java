@@ -26,6 +26,7 @@ import com.hm.achievement.category.NormalAchievements;
 import com.hm.achievement.config.AchievementMap;
 import com.hm.achievement.db.CacheManager;
 import com.hm.achievement.lifecycle.Reloadable;
+import com.hm.achievement.utils.FoliaHelper;
 import com.hm.achievement.utils.NumberHelper;
 
 /**
@@ -84,10 +85,10 @@ public class MainGUI implements Reloadable {
 			return;
 		}
 
-		advancedAchievements.getServer().getScheduler().runTaskAsynchronously(advancedAchievements, () -> {
+		FoliaHelper.runAsync(() -> {
 			try {
 				cacheManager.getPlayerAchievements(playerId);
-				advancedAchievements.getServer().getScheduler().runTask(advancedAchievements, () -> {
+				FoliaHelper.runOnPlayer(player, () -> {
 					if (player.isOnline()) {
 						displayCachedMainGUI(player);
 					}

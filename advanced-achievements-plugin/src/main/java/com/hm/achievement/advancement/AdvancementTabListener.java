@@ -2,12 +2,12 @@ package com.hm.achievement.advancement;
 
 import javax.inject.Inject;
 
-import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
 import com.hm.achievement.AdvancedAchievements;
+import com.hm.achievement.utils.FoliaHelper;
 
 public class AdvancementTabListener implements Listener {
 
@@ -23,7 +23,7 @@ public class AdvancementTabListener implements Listener {
 	@EventHandler
 	public void onJoin(PlayerJoinEvent event) {
 		// 1 tick later so generation (if running) has time to register the parent
-		Bukkit.getScheduler().runTaskLater(advancedAchievements,
-				() -> advancementManager.ensureRootVisible(event.getPlayer()), 1L);
+		FoliaHelper.runLaterOnPlayer(event.getPlayer(), 1L,
+				() -> advancementManager.ensureRootVisible(event.getPlayer()));
 	}
 }

@@ -32,8 +32,10 @@ import com.hm.achievement.domain.Achievement;
 import com.hm.achievement.gui.GUIItems;
 import com.hm.achievement.gui.OrderedCategory;
 import com.hm.achievement.lifecycle.Reloadable;
+import com.hm.achievement.utils.FoliaHelper;
 import com.hm.achievement.utils.StringHelper;
-import org.bukkit.scheduler.BukkitTask;
+
+import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
 
 @SuppressWarnings("deprecation")
 @Singleton
@@ -56,7 +58,7 @@ public class AdvancementManager implements Reloadable {
 	private String configRootAdvancementTitle;
 	private String configBackgroundTexture;
 	private int generatedAdvancements;
-	private BukkitTask generationTask;
+	private ScheduledTask generationTask;
 	private static final int DEFAULT_PER_TICK = 10;
 
 	private static final class LoadRequest {
@@ -229,7 +231,7 @@ public class AdvancementManager implements Reloadable {
 		final int perTick = Math.max(1, mainConfig.getInt("AdvancementGenerationPerTick", DEFAULT_PER_TICK));
 		final GenerationState state = new GenerationState();
 
-		generationTask = Bukkit.getScheduler().runTaskTimer(advancedAchievements, () -> {
+		generationTask = FoliaHelper.runTimerOnGlobal(1L, 1L, () -> {
 			if (state.terminal) {
 				return;
 			}
@@ -296,11 +298,11 @@ public class AdvancementManager implements Reloadable {
 					feedback.sendMessage("§cAdvancement generation failed. Check the server logs for details.");
 				}
 			}
-		}, 1L, 1L);
+		});
 	}
 
 	private void stopGenerationTask() {
-		BukkitTask task = generationTask;
+		ScheduledTask task = generationTask;
 		generationTask = null;
 		if (task != null) {
 			task.cancel();

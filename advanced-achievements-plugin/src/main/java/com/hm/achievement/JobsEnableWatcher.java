@@ -2,10 +2,10 @@ package com.hm.achievement;
 
 import com.hm.achievement.exception.PluginLoadError;
 import com.hm.achievement.lifecycle.PluginLoader;
+import com.hm.achievement.utils.FoliaHelper;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
-import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginEnableEvent;
@@ -30,7 +30,7 @@ public class JobsEnableWatcher implements Listener {
 	@EventHandler
 	public void onPluginEnable(PluginEnableEvent e) {
 		if (e.getPlugin().getName().equalsIgnoreCase("Jobs")) {
-			Bukkit.getScheduler().runTask(aa, () -> {
+			FoliaHelper.runOnGlobal(() -> {
 				try {
 					loaderProvider.get().loadAdvancedAchievements();
 					log.info("[AdvancedAchievements] Jobs enabled; JobsReborn category now active.");

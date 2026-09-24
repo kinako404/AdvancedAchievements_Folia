@@ -50,6 +50,7 @@ import com.hm.achievement.domain.Reward;
 import com.hm.achievement.lifecycle.Reloadable;
 import com.hm.achievement.utils.ColorHelper;
 import com.hm.achievement.utils.FancyMessageSender;
+import com.hm.achievement.utils.FoliaHelper;
 import com.hm.achievement.utils.StringHelper;
 
 import net.md_5.bungee.api.ChatMessageType;
@@ -244,8 +245,8 @@ public class PlayerAdvancedAchievementListener implements Listener, Reloadable {
 			String message = StringUtils.replaceOnce(langBossBarProgress, "AMOUNT", receivedAmount + "/" + totalAmount);
 			BossBar bossBar = Bukkit.getServer().createBossBar(message, barColor, BarStyle.SOLID);
 			bossBar.setProgress(progress);
-			Bukkit.getScheduler().scheduleSyncDelayedTask(advancedAchievements, () -> bossBar.addPlayer(player), 110);
-			Bukkit.getScheduler().scheduleSyncDelayedTask(advancedAchievements, () -> bossBar.removePlayer(player), 240);
+			FoliaHelper.runLaterOnGlobal(110L, () -> bossBar.addPlayer(player));
+			FoliaHelper.runLaterOnGlobal(240L, () -> bossBar.removePlayer(player));
 		}
 	}
 

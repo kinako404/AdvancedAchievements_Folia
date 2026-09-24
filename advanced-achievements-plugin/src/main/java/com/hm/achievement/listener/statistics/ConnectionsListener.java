@@ -4,7 +4,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -19,6 +18,7 @@ import com.hm.achievement.config.AchievementMap;
 import com.hm.achievement.db.AbstractDatabaseManager;
 import com.hm.achievement.db.CacheManager;
 import com.hm.achievement.db.data.ConnectionInformation;
+import com.hm.achievement.utils.FoliaHelper;
 
 /**
  * Listener class to deal with Connections achievements. This class uses delays processing of tasks to avoid spamming a
@@ -62,17 +62,17 @@ public class ConnectionsListener extends AbstractListener {
 	 * @param player
 	 */
 	private void scheduleAwardConnection(Player player) {
-		Bukkit.getScheduler().runTaskAsynchronously(advancedAchievements, () -> {
+		FoliaHelper.runAsync(() -> {
 			ConnectionInformation connectionInformation = databaseManager.getConnectionInformation(player.getUniqueId());
 			if (!ConnectionInformation.today().equals(connectionInformation.getDate())) {
-				// Switch to main server thread as Bukkit APIs aren't thread-safe and shouldn't be used in async tasks.
-				Bukkit.getScheduler().scheduleSyncDelayedTask(advancedAchievements, () -> {
+				// Switch to global region as Bukkit APIs aren't thread-safe and shouldn't be used in async tasks.
+				FoliaHelper.runLaterOnGlobal(100L, () -> {
 					if (player.isOnline() && shouldIncreaseBeTakenIntoAccount(player)) {
 						long updatedConnectionCount = connectionInformation.getCount() + 1;
 						databaseManager.updateConnectionInformation(player.getUniqueId(), updatedConnectionCount);
 						checkThresholdsAndAchievements(player, category, updatedConnectionCount);
 					}
-				}, 100);
+				});
 			}
 		});
 	}

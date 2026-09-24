@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
-import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
@@ -17,6 +16,7 @@ import com.hm.achievement.config.AchievementMap;
 import com.hm.achievement.db.CacheManager;
 import com.hm.achievement.domain.Achievement;
 import com.hm.achievement.lifecycle.Cleanable;
+import com.hm.achievement.utils.FoliaHelper;
 
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -104,8 +104,7 @@ public class AbstractRateLimitedListener extends AbstractListener implements Cle
 			if (configCooldownActionBar) {
 				if (category == NormalAchievements.MUSICDISCS) {
 					// Display message with a delay to avoid it being overwritten by disc name message.
-					Bukkit.getScheduler().scheduleSyncDelayedTask(advancedAchievements,
-							() -> displayActionBarMessage(player, timeToWait), 20);
+					FoliaHelper.runLaterOnGlobal(20L, () -> displayActionBarMessage(player, timeToWait));
 				} else {
 					displayActionBarMessage(player, timeToWait);
 				}

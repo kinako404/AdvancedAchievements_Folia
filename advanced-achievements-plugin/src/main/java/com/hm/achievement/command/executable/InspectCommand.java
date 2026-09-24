@@ -28,6 +28,7 @@ import com.hm.achievement.config.AchievementMap;
 import com.hm.achievement.db.AbstractDatabaseManager;
 import com.hm.achievement.db.data.AwardedDBAchievement;
 import com.hm.achievement.domain.Achievement;
+import com.hm.achievement.utils.FoliaHelper;
 import com.hm.achievement.utils.StringHelper;
 
 /**
@@ -92,18 +93,17 @@ public class InspectCommand extends AbstractCommand {
 			return;
 		}
 
-		advancedAchievements.getServer().getScheduler().runTaskAsynchronously(advancedAchievements, () -> {
+		FoliaHelper.runAsync(() -> {
 			try {
 				List<AwardedDBAchievement> recipients = databaseManager
 						.getAchievementsRecipientList(achievement.getName());
-				advancedAchievements.getServer().getScheduler().runTask(advancedAchievements, () -> {
+				FoliaHelper.runOnGlobal(() -> {
 					cache(achievement.getName(), recipients);
 					cachedPaginations.get(achievement.getName()).sendPage(page, sender);
 				});
 			} catch (RuntimeException e) {
 				advancedAchievements.getLogger().warning("Could not inspect achievement recipients: " + e.getMessage());
-				advancedAchievements.getServer().getScheduler().runTask(advancedAchievements,
-						() -> sender.sendMessage(pluginHeader + langConfig.getString("database-error")));
+				FoliaHelper.runOnGlobal(() -> sender.sendMessage(pluginHeader + langConfig.getString("database-error")));
 			}
 		});
 	}

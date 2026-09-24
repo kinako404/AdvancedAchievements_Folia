@@ -40,6 +40,7 @@ import com.hm.achievement.db.CacheManager;
 import com.hm.achievement.domain.Achievement;
 import com.hm.achievement.domain.Reward;
 import com.hm.achievement.lifecycle.Reloadable;
+import com.hm.achievement.utils.FoliaHelper;
 import com.hm.achievement.utils.NumberHelper;
 import com.hm.achievement.utils.StringHelper;
 
@@ -157,13 +158,13 @@ public class CategoryGUI implements Reloadable {
 								: Collections.emptySet();
 				UUID playerId = player.getUniqueId();
 				ItemStack clickedItem = item.clone();
-				advancedAchievements.getServer().getScheduler().runTaskAsynchronously(advancedAchievements, () -> {
+				FoliaHelper.runAsync(() -> {
 					try {
 						Map<String, Long> subcategoriesToStatistics = getStatisticsMapping(category, subcategories,
 								playerId, achievements);
 						Set<String> receivedAchievementNames = new HashSet<>(cacheManager.getPlayerAchievements(playerId));
 						Map<String, String> achievementDates = databaseManager.getPlayerAchievementDates(playerId);
-						advancedAchievements.getServer().getScheduler().runTask(advancedAchievements, () -> {
+						FoliaHelper.runOnPlayer(player, () -> {
 							if (player.isOnline()) {
 								displayPage(player, subcategoriesToStatistics, receivedAchievementNames, achievementDates,
 										requestedPage, clickedItem, achievements);
