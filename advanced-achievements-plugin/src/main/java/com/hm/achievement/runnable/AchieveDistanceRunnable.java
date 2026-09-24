@@ -1,9 +1,9 @@
 package com.hm.achievement.runnable;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -22,6 +22,7 @@ import com.hm.achievement.category.NormalAchievements;
 import com.hm.achievement.config.AchievementMap;
 import com.hm.achievement.db.CacheManager;
 import com.hm.achievement.lifecycle.Cleanable;
+import com.hm.achievement.utils.FoliaHelper;
 import com.hm.achievement.utils.StatisticIncreaseHandler;
 
 /**
@@ -33,7 +34,7 @@ import com.hm.achievement.utils.StatisticIncreaseHandler;
 @Singleton
 public class AchieveDistanceRunnable extends StatisticIncreaseHandler implements Cleanable, Runnable {
 
-	private final Map<UUID, Location> playerLocations = new HashMap<>();
+	private final Map<UUID, Location> playerLocations = new ConcurrentHashMap<>();
 	private final Set<Category> disabledCategories;
 
 	private boolean configIgnoreVerticalDistance;
@@ -59,7 +60,10 @@ public class AchieveDistanceRunnable extends StatisticIncreaseHandler implements
 
 	@Override
 	public void run() {
-		Bukkit.getOnlinePlayers().forEach(this::validateMovementAndUpdateDistance);
+		// Players' positions and statistics must be read and updated on the thread owning their region.
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			FoliaHelper.runOnPlayer(player, () -> validateMovementAndUpdateDistance(player));
+		}
 	}
 
 	public void updateLocation(UUID uuid, Location location) {

@@ -65,8 +65,8 @@ public class ConnectionsListener extends AbstractListener {
 		FoliaHelper.runAsync(() -> {
 			ConnectionInformation connectionInformation = databaseManager.getConnectionInformation(player.getUniqueId());
 			if (!ConnectionInformation.today().equals(connectionInformation.getDate())) {
-				// Switch to global region as Bukkit APIs aren't thread-safe and shouldn't be used in async tasks.
-				FoliaHelper.runLaterOnGlobal(100L, () -> {
+				// Delegate to the player's region: Bukkit APIs aren't thread-safe and shouldn't be used in async tasks.
+				FoliaHelper.runLaterOnPlayer(player, 100L, () -> {
 					if (player.isOnline() && shouldIncreaseBeTakenIntoAccount(player)) {
 						long updatedConnectionCount = connectionInformation.getCount() + 1;
 						databaseManager.updateConnectionInformation(player.getUniqueId(), updatedConnectionCount);

@@ -14,6 +14,7 @@ import com.earth2me.essentials.Essentials;
 import com.hm.achievement.category.NormalAchievements;
 import com.hm.achievement.config.AchievementMap;
 import com.hm.achievement.db.CacheManager;
+import com.hm.achievement.utils.FoliaHelper;
 import com.hm.achievement.utils.StatisticIncreaseHandler;
 
 /**
@@ -55,7 +56,10 @@ public class AchievePlayTimeRunnable extends StatisticIncreaseHandler implements
 	public void run() {
 		long currentTimeMillis = System.currentTimeMillis();
 		int millisSincePreviousRun = (int) (currentTimeMillis - previousTimeMillis);
-		Bukkit.getOnlinePlayers().forEach(p -> updateTime(p, millisSincePreviousRun));
+		// Players' statistics must be updated on the thread owning their region.
+		for (Player player : Bukkit.getOnlinePlayers()) {
+			FoliaHelper.runOnPlayer(player, () -> updateTime(player, millisSincePreviousRun));
+		}
 		previousTimeMillis = currentTimeMillis;
 	}
 

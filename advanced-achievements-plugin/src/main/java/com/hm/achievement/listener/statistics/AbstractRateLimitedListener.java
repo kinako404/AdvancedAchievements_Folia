@@ -104,7 +104,7 @@ public class AbstractRateLimitedListener extends AbstractListener implements Cle
 			if (configCooldownActionBar) {
 				if (category == NormalAchievements.MUSICDISCS) {
 					// Display message with a delay to avoid it being overwritten by disc name message.
-					FoliaHelper.runLaterOnGlobal(20L, () -> displayActionBarMessage(player, timeToWait));
+					FoliaHelper.runLaterOnPlayer(player, 20L, () -> displayActionBarMessage(player, timeToWait));
 				} else {
 					displayActionBarMessage(player, timeToWait);
 				}

@@ -245,8 +245,8 @@ public class PlayerAdvancedAchievementListener implements Listener, Reloadable {
 			String message = StringUtils.replaceOnce(langBossBarProgress, "AMOUNT", receivedAmount + "/" + totalAmount);
 			BossBar bossBar = Bukkit.getServer().createBossBar(message, barColor, BarStyle.SOLID);
 			bossBar.setProgress(progress);
-			FoliaHelper.runLaterOnGlobal(110L, () -> bossBar.addPlayer(player));
-			FoliaHelper.runLaterOnGlobal(240L, () -> bossBar.removePlayer(player));
+			FoliaHelper.runLaterOnPlayer(player, 110L, () -> bossBar.addPlayer(player));
+			FoliaHelper.runLaterOnPlayer(player, 240L, () -> bossBar.removePlayer(player));
 		}
 	}
 

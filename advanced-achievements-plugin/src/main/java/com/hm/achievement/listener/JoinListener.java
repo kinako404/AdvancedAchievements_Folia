@@ -62,7 +62,7 @@ public class JoinListener implements Listener {
 	 * @param player
 	 */
 	private void scheduleAwardAdvancements(Player player) {
-		FoliaHelper.runLaterOnGlobal(200L, () -> {
+		FoliaHelper.runLaterOnPlayer(player, 200L, () -> {
 			// Check that the player is still connected.
 			if (!player.isOnline()) {
 				return;
