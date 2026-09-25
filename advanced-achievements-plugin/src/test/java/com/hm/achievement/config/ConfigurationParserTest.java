@@ -9,7 +9,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,14 +21,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.PluginManager;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.MockedStatic;
+import org.mockbukkit.mockbukkit.MockBukkit;
 
 import com.hm.achievement.AdvancedAchievements;
 import com.hm.achievement.category.Category;
@@ -40,6 +40,17 @@ import com.hm.achievement.exception.PluginLoadError;
 import com.hm.achievement.utils.MaterialHelper;
 
 class ConfigurationParserTest {
+
+	@BeforeEach
+	void setUp() {
+		// Achievement rewards are built from materials, which are resolved against the server's item registry.
+		MockBukkit.mock();
+	}
+
+	@AfterEach
+	void tearDown() {
+		MockBukkit.unmock();
+	}
 
 	@Test
 	void shouldKeepLiveConfigurationWhenReloadValidationFails(@TempDir File tempDir) throws Exception {
@@ -96,10 +107,7 @@ class ConfigurationParserTest {
 				disabledCategories, new StringBuilder(), Logger.getAnonymousLogger(), new YamlUpdater(plugin), plugin,
 				rewardParser);
 
-		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
-			underTest.loadAndParseConfiguration();
-		}
+		underTest.loadAndParseConfiguration();
 
 		assertEquals("sqlite", mainConfig.getString("DatabaseType"));
 		assertEquals(81, achievementMap.getAll().size());
@@ -139,10 +147,7 @@ class ConfigurationParserTest {
 				achievementMap, new HashSet<>(), new StringBuilder(), Logger.getAnonymousLogger(),
 				new YamlUpdater(plugin), plugin, rewardParser);
 
-		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
-			underTest.loadAndParseConfiguration();
-		}
+		underTest.loadAndParseConfiguration();
 
 		assertEquals("The Smelter", achievementMap.getForName("smeltitems_250").getDisplayName());
 		assertEquals("The Smelter", achievementMap.getForName("smeltitems_500").getDisplayName());
@@ -178,10 +183,7 @@ class ConfigurationParserTest {
 				achievementMap, new HashSet<>(), new StringBuilder(), Logger.getAnonymousLogger(),
 				new YamlUpdater(plugin), plugin, rewardParser);
 
-		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
-			underTest.loadAndParseConfiguration();
-		}
+		underTest.loadAndParseConfiguration();
 
 		List<Achievement> achievements = achievementMap.getForCategory(NormalAchievements.ANVILS);
 		assertEquals(List.of(1L, 20L, 100L), achievements.stream().map(Achievement::getThreshold).toList());
@@ -222,10 +224,7 @@ class ConfigurationParserTest {
 				achievementMap, new HashSet<>(), new StringBuilder(), logger, new YamlUpdater(plugin), plugin,
 				rewardParser);
 
-		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
-			underTest.loadAndParseConfiguration();
-		}
+		underTest.loadAndParseConfiguration();
 
 		assertEquals(82, achievementMap.getAll().size());
 		assertEquals("The Smelter", achievementMap.getForName("smeltitems_500").getDisplayName());
@@ -265,10 +264,7 @@ class ConfigurationParserTest {
 				new YamlConfiguration(), achievementMap, new HashSet<>(), new StringBuilder(), logger,
 				new YamlUpdater(plugin), plugin, rewardParser);
 
-		try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-			bukkit.when(Bukkit::getPluginManager).thenReturn(pluginManager);
-			underTest.loadAndParseConfiguration();
-		}
+		underTest.loadAndParseConfiguration();
 
 		assertNull(achievementMap.getForName("retry-key!"));
 		assertEquals("retry-key?", achievementMap.getForName("retry-key?").getName());

@@ -16,6 +16,12 @@
 		<java.version>21</java.version>
 		<byte-buddy.version>1.17.7</byte-buddy.version>
 		<mockito.version>5.20.0</mockito.version>
+		<mockbukkit.artifact>mockbukkit-v1.21</mockbukkit.artifact>
+		<mockbukkit.version>4.0.0</mockbukkit.version>
+		<!-- Default to the 1.21 line; the mc26 profile overrides these properties. -->
+		<paper.api.version>1.21.1-R0.1-SNAPSHOT</paper.api.version>
+		<minecraft.api.version>1.21</minecraft.api.version>
+		<shaded.jar.name>AdvancedAchievements</shaded.jar.name>
 	</properties>
 
 	<modules>
@@ -58,6 +64,22 @@
 			</plugins>
 		</pluginManagement>
 	</build>
+
+	<profiles>
+		<!-- Builds against the Minecraft 26.2 (Paper/Folia) API instead of the default 1.21 line:
+		     mvn -Pmc26 clean package -->
+		<profile>
+			<id>mc26</id>
+			<properties>
+				<paper.api.version>26.2.build.129-stable</paper.api.version>
+				<minecraft.api.version>26.2</minecraft.api.version>
+				<shaded.jar.name>AdvancedAchievements-26.2</shaded.jar.name>
+				<!-- Test framework builds are version specific. -->
+				<mockbukkit.artifact>mockbukkit-v26.2</mockbukkit.artifact>
+				<mockbukkit.version>4.116.1</mockbukkit.version>
+			</properties>
+		</profile>
+	</profiles>
 
 	<repositories>
 		<repository>
@@ -102,7 +124,7 @@
 			<dependency>
 				<groupId>io.papermc.paper</groupId>
 				<artifactId>paper-api</artifactId>
-				<version>1.21.1-R0.1-SNAPSHOT</version>
+				<version>${paper.api.version}</version>
 				<type>jar</type>
 				<scope>provided</scope>
 			</dependency>
@@ -174,8 +196,8 @@
 			</dependency>
 			<dependency>
 				<groupId>org.mockbukkit.mockbukkit</groupId>
-				<artifactId>mockbukkit-v1.21</artifactId>
-				<version>4.0.0</version>
+				<artifactId>${mockbukkit.artifact}</artifactId>
+				<version>${mockbukkit.version}</version>
 				<scope>test</scope>
 			</dependency>
 		</dependencies>

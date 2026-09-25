@@ -1,6 +1,7 @@
 package com.hm.achievement.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockbukkit.mockbukkit.MockBukkit;
 import org.mockito.Answers;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -178,7 +180,11 @@ class RewardParserTest {
 		assertEquals(Arrays.asList("increase max health by 2"), reward.getListTexts());
 		assertEquals(Arrays.asList("Your max health has increased by 2!"), reward.getChatTexts());
 		reward.getRewarder().accept(player);
-		verify(player).getAttribute(Attribute.GENERIC_MAX_HEALTH);
+		ArgumentCaptor<Attribute> attributeCaptor = ArgumentCaptor.forClass(Attribute.class);
+		verify(player).getAttribute(attributeCaptor.capture());
+		// The registry key of the max health attribute changed from generic.max_health to max_health in 1.21.2.
+		String attributeKey = attributeCaptor.getValue().getKey().getKey();
+		assertTrue("max_health".equals(attributeKey) || "generic.max_health".equals(attributeKey));
 		verify(healthAttribute).setBaseValue(3.0);
 	}
 

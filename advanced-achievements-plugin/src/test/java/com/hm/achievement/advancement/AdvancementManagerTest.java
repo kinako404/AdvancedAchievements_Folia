@@ -43,6 +43,7 @@ import com.hm.achievement.domain.Achievement.AchievementBuilder;
 import com.hm.achievement.gui.GUIItems;
 import com.hm.achievement.gui.OrderedCategory;
 import com.hm.achievement.utils.FoliaHelper;
+import com.hm.achievement.utils.NamespacedPluginMock;
 
 import io.papermc.paper.threadedregions.scheduler.GlobalRegionScheduler;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
@@ -52,7 +53,6 @@ class AdvancementManagerTest {
 
 	@Mock
 	private GUIItems guiItems;
-	@Mock
 	private AdvancedAchievements plugin;
 	@Mock
 	private Logger logger;
@@ -71,6 +71,7 @@ class AdvancementManagerTest {
 
 	@BeforeEach
 	void setUp() {
+		plugin = NamespacedPluginMock.create();
 		FoliaHelper.init(plugin);
 		mainConfig = new YamlConfiguration();
 		mainConfig.set("RegisterAdvancementDescriptions", true);
@@ -80,7 +81,6 @@ class AdvancementManagerTest {
 		mainConfig.set("AdvancementsBackground", "minecraft:block/purple_concrete");
 		mainConfig.set("AdvancementGenerationPerTick", 1);
 		achievementMap = new AchievementMap();
-		when(plugin.getName()).thenReturn("AdvancedAchievements");
 		underTest = new AdvancementManager(mainConfig, guiItems, achievementMap, plugin, logger, Set.of());
 		underTest.extractConfigurationParameters();
 	}

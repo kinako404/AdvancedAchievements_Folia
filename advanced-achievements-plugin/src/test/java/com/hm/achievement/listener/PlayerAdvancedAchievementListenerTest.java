@@ -43,6 +43,7 @@ import com.hm.achievement.domain.Achievement;
 import com.hm.achievement.domain.Achievement.AchievementBuilder;
 import com.hm.achievement.domain.Reward;
 import com.hm.achievement.utils.FancyMessageSender;
+import com.hm.achievement.utils.NamespacedPluginMock;
 
 /**
  * Class for testing PlayerAdvancedAchievementListener. Currently covers AllAchievementsReceivedRewards usage.
@@ -63,8 +64,7 @@ class PlayerAdvancedAchievementListenerTest {
 	private World world;
 	@Mock
 	private AbstractDatabaseManager abstractDatabaseManager;
-	@Mock
-	private AdvancedAchievements plugin;
+	private AdvancedAchievements plugin = NamespacedPluginMock.create();
 
 	private PlayerAdvancedAchievementListener underTest;
 
@@ -153,7 +153,6 @@ class PlayerAdvancedAchievementListenerTest {
 		underTest.extractConfigurationParameters();
 		when(player.getUniqueId()).thenReturn(PLAYER_UUID);
 		when(player.getName()).thenReturn("Tealon");
-		when(plugin.getName()).thenReturn("AdvancedAchievements");
 		when(plugin.getServer()).thenReturn(server);
 		doReturn(Collections.emptyList()).when(server).getOnlinePlayers();
 		when(abstractDatabaseManager.getPlayerAchievementNames(PLAYER_UUID)).thenReturn(new HashSet<>());

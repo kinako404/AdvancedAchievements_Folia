@@ -20,6 +20,8 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.text.WordUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.Server;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -52,6 +54,7 @@ public class RewardParser {
 	private final YamlConfiguration langConfig;
 	private final Server server;
 	private final MaterialHelper materialHelper;
+	private final Attribute maxHealthAttribute;
 
 	// Used for Vault plugin integration.
 	private Economy economy;
@@ -63,6 +66,7 @@ public class RewardParser {
 		this.langConfig = langConfig;
 		this.materialHelper = materialHelper;
 		this.server = advancedAchievements.getServer();
+		this.maxHealthAttribute = resolveMaxHealthAttribute(server);
 		// Try to retrieve an Economy instance from Vault.
 		if (server.getPluginManager().isPluginEnabled("Vault")) {
 			RegisteredServiceProvider<Economy> rsp = server.getServicesManager().getRegistration(Economy.class);
@@ -89,6 +93,23 @@ public class RewardParser {
 		this.langConfig = langConfig;
 		this.server = server;
 		this.materialHelper = materialHelper;
+		this.maxHealthAttribute = resolveMaxHealthAttribute(server);
+	}
+
+	/**
+	 * Resolves the max health attribute from the registry: its key was renamed from generic.max_health to max_health in
+	 * Minecraft 1.21.2.
+	 */
+	private static Attribute resolveMaxHealthAttribute(Server server) {
+		Attribute attribute = Registry.ATTRIBUTE.get(NamespacedKey.minecraft("max_health"));
+		if (attribute == null) {
+			attribute = Registry.ATTRIBUTE.get(NamespacedKey.minecraft("generic.max_health"));
+		}
+		if (attribute == null) {
+			server.getLogger().warning(
+					"Could not resolve the max health attribute, IncreaseMaxHealth rewards will have no effect.");
+		}
+		return attribute;
 	}
 
 	public List<Reward> parseRewards(String path) {
@@ -197,7 +218,10 @@ public class RewardParser {
 				StringUtils.replaceOnce(langConfig.getString("increase-max-health-reward-received"), "AMOUNT",
 						Integer.toString(amount)));
 		Consumer<Player> rewarder = player -> {
-			AttributeInstance playerAttribute = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+			if (maxHealthAttribute == null) {
+				return;
+			}
+			AttributeInstance playerAttribute = player.getAttribute(maxHealthAttribute);
 			playerAttribute.setBaseValue(playerAttribute.getBaseValue() + amount);
 		};
 		return new Reward(Collections.singletonList(listText), Collections.singletonList(chatText), rewarder);

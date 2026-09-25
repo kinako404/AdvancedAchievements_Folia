@@ -42,7 +42,7 @@ class PluginDescriptorTest {
 		assertNotNull(version);
 		assertFalse(version.isBlank());
 		assertFalse(version.contains("${"), "Maven resource filtering did not resolve the plugin version");
-		assertEquals("1.21", descriptor.getString("api-version"));
+		assertEquals(System.getProperty("minecraft.api.version", "1.21"), descriptor.getString("api-version"));
 		assertEquals("https://github.com/LucidAPs/AdvancedAchievements", descriptor.getString("website"));
 	}
 
